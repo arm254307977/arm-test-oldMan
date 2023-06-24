@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 import Swal from "sweetalert2";
+import { firestore } from "./database/firebase";
+import { addDoc, collection } from "@firebase/firestore";
 
 function App() {
   const colors = ["red", "yellow", "green"];
@@ -33,6 +35,8 @@ function App() {
   const [border1, setBroder1] = useState("none");
   const [border2, setBroder2] = useState("none");
   const [border3, setBroder3] = useState("none");
+  const [fullName, setFullName] = useState("");
+  const [patientCode, setPatientCode] = useState("");
 
   useEffect(() => {
     let interval;
@@ -96,13 +100,7 @@ function App() {
     ) {
       setBoxColor1("green");
       setBoxColor2("blue");
-      return Swal.fire({
-        position: "top",
-        icon: "success",
-        title: "เลือกตัวเลขถัดไปได้เลย",
-        showConfirmButton: false,
-        timer: 1500,
-      });
+      return;
     } else if (
       boxColor2 !== "green" &&
       boxColor2 !== "red" &&
@@ -110,26 +108,13 @@ function App() {
     ) {
       setBoxColor2("green");
       setBoxColor3("blue");
-      return Swal.fire({
-        position: "top",
-        icon: "success",
-        title: "เลือกตัวเลขถัดไปได้เลย",
-        showConfirmButton: false,
-        timer: 1500,
-      });
+      return;
     } else if (
       boxColor3 !== "green" &&
       boxColor3 !== "red" &&
       selectedNumber === randomNumbers3
     ) {
       setBoxColor3("green");
-      Swal.fire({
-        position: "top",
-        icon: "success",
-        title: "เยี่ยม ทำข้อถัดไปกันเถอะ",
-        showConfirmButton: false,
-        timer: 1500,
-      });
       const number1Index = Math.floor(Math.random() * numbers.length);
       const number1 = numbers[number1Index];
       numbers.splice(number1Index, 1);
@@ -188,10 +173,19 @@ function App() {
           setTimeChoice3(formattedTime);
         }
       }
-
       setBoxColor2("red");
+      setBoxColor1("blue");
       setBoxColor3("red");
-      return setBoxColor1("blue");
+      if (nextStart === 4) {
+        return Swal.fire({
+          position: "top",
+          icon: "success",
+          title: "เยี่ยม ทำชุดถัดไปกันเถอะ",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+      }
+      return;
     } else {
       return Swal.fire({
         position: "top",
@@ -211,13 +205,7 @@ function App() {
     ) {
       setBroder1("none");
       setBroder2("solid");
-      return Swal.fire({
-        position: "top",
-        icon: "success",
-        title: "เลือกสีถัดไปกันเถอะ",
-        showConfirmButton: false,
-        timer: 1500,
-      });
+      return;
     } else if (
       border2 !== "none" &&
       border2 === "solid" &&
@@ -225,25 +213,12 @@ function App() {
     ) {
       setBroder2("none");
       setBroder3("solid");
-      return Swal.fire({
-        position: "top",
-        icon: "success",
-        title: "เลือกสีถัดไปกันเถอะ",
-        showConfirmButton: false,
-        timer: 1500,
-      });
+      return;
     } else if (
       border3 !== "none" &&
       border3 === "solid" &&
       randomColors3 === selectedColors
     ) {
-      Swal.fire({
-        position: "top",
-        icon: "success",
-        title: "คำตอบถูกต้อง ทำข้อต่อไปกันเถอะ",
-        showConfirmButton: false,
-        timer: 1500,
-      });
       let randomColor1 = colors[Math.floor(Math.random() * colors.length)];
       let randomColor2 = colors[Math.floor(Math.random() * colors.length)];
       let randomColor3 = colors[Math.floor(Math.random() * colors.length)];
@@ -327,6 +302,37 @@ function App() {
         showConfirmButton: false,
         timer: 1500,
       });
+    }
+  };
+
+  const handleFormSubmit = async (event) => {
+    event.preventDefault();
+    // สร้างอ็อบเจกต์ข้อมูลที่จะบันทึกลงใน Firebase
+    let formData = {
+      ID: patientCode,
+      Name: fullName,
+      game_time_1: `${timeChoice1} นาที`,
+      game_time_2: `${timeChoice2} นาที`,
+      game_time_3: `${timeChoice3} นาที`,
+      game_time_4: `${timeChoice4} นาที`,
+      game_time_5: `${timeChoice5} นาที`,
+      game_time_6: `${timeChoice6} นาที`,
+      Total_game_time: `${formattedTime} นาที`,
+    };
+    // บันทึกข้อมูลลงใน Firebase
+    try {
+      Swal.fire({
+        position: "top",
+        icon: "success",
+        title: "ขอบคุณสำหรับการทำแบบทดสอบ",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+      const docRef = await addDoc(collection(firestore, "data"), formData);
+      console.log("Document written with ID: ", docRef.id);
+      return window.location.reload();
+    } catch (error) {
+      console.error("Error adding document: ", error);
     }
   };
 
@@ -683,11 +689,24 @@ function App() {
             <label htmlFor="" className="text-data">
               ชื่อ-นามสกุล
             </label>
-            <input type="text" />
+            <input
+              type="text"
+              id="fullName"
+              placeholder="กรุณากรอกชื่อ-นามสกุล"
+              value={fullName}
+              onChange={(event) => setFullName(event.target.value)}
+            />
             <label htmlFor="" className="text-data">
               รหัสคนไข้
             </label>
-            <input type="text" maxLength={10} />
+            <input
+              type="text"
+              id="patientCode"
+              maxLength={10}
+              placeholder="กรุณากรอกรหัสประจำตัว"
+              value={patientCode}
+              onChange={(event) => setPatientCode(event.target.value)}
+            />
             <label
               htmlFor=""
               className="text-data"
@@ -698,10 +717,16 @@ function App() {
               <div>ข้อ 3 : {timeChoice3} นาที</div>
               <div>ข้อ 4 : {timeChoice4} นาที</div>
               <div>ข้อ 5 : {timeChoice5} นาที</div>
-              <div style={{marginBottom:10}}>ข้อ 6 : {timeChoice6} นาที</div>
+              <div style={{ marginBottom: 10 }}>ข้อ 6 : {timeChoice6} นาที</div>
               เวลาทั้งหมดในการทำ: {formattedTime} นาที
             </label>
-            <button className="save-button">บันทึก</button>
+            <button
+              className="save-button"
+              type="submit"
+              onClick={handleFormSubmit}
+            >
+              บันทึก
+            </button>
           </form>
         </div>
       )}
